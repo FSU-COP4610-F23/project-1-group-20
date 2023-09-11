@@ -1,3 +1,4 @@
+# HELLO
 SRC := src
 OBJ := obj
 BIN := bin
