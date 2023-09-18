@@ -39,9 +39,17 @@ int main() {
 					envvar[j] = tokens->items[i][j+1];
 				}
 				char *str = getenv(envvar);
-				printf("%s\n", str);\
-
-				printf("%p\n", &str);
+				//char *str1 = (char *) malloc(getenv(envvar)+1);
+				char *str2 = (char *) malloc(strlen(str)+1);
+				strcpy(str2, str); 
+				free(tokens->items[i]);
+				tokens->items[i] = str2; 
+				printf("%s\n", str);
+				printf("%s\n", str2);
+				printf("%s\n", tokens->items[i]);
+				
+				//printf("%p\n", &str);
+				//printf("%p\n", &str2);
 		}
 	}
 
