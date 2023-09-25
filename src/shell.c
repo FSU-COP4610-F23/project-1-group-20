@@ -37,6 +37,18 @@ int main()
 	print(tokens);
 	free(input);
 	free_tokens(tokens);
+
+	//loop thru delimited $PATH
+	char * delimitedPATH = strtok(getenv("PATH"),":");
+	while (delimitedPATH != NULL)
+	{
+		/* code */
+		printf("%s\n",delimitedPATH);
+		delimitedPATH = strtok(NULL, ":");
+	}
+	
+	
+
 	return 0;
 }
 
