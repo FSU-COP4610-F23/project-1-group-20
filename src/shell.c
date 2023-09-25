@@ -5,60 +5,38 @@
 #include "lexer.c"
 
 void showPrompt();
-void getUserInput();
+void print(tokenlist *tokens);
+char* replace_environment_variable(char *token);
+char* replace_tilda(char *token);
 
-int main() {
-
+int main()
+{
 	showPrompt();
-	
 	char *input = get_input();
-
 	tokenlist *tokens = get_tokens(input);
+	print(tokens);
+
+	// Loop thru tokens...
 	for (int i=0; i<tokens->size; i++)
 	{
-		char firstChar = tokens->items[i][0];
-		int tokenLength = strlen(tokens->items[i]);
-		bool foundDollar = false;
-		bool foundTilde = false;
-
-		switch (firstChar)
+		// Get first character of token.
+		switch (tokens->items[i][0])
 		{
 			case '$' :
-				foundDollar = true;
+				// Replace environment variable.
+				tokens->items[i] = replace_environment_variable(tokens->items[i]);
 				break;
 			case '~' :
-				foundTilde = true;
+				// Replace tilda with home folder.
+				tokens->items[i] = replace_tilda(tokens->items[i]);
 				break;
 		}
 
-		if (foundDollar) 
-		{
-				char envvar[tokenLength-1];
-				for (int j=0; j<tokenLength; j++)
-				{
-					envvar[j] = tokens->items[i][j+1];
-				}
-				char *str = getenv(envvar);
-				//char *str1 = (char *) malloc(getenv(envvar)+1);
-				char *str2 = (char *) malloc(strlen(str)+1);
-				strcpy(str2, str); 
-				free(tokens->items[i]);
-				tokens->items[i] = str2; 
-				printf("%s\n", str);
-				printf("%s\n", str2);
-				printf("%s\n", tokens->items[i]);
-				
-				//printf("%p\n", &str);
-				//printf("%p\n", &str2);
-		}
 	}
 
-	
-
+	print(tokens);
 	free(input);
 	free_tokens(tokens);
-
-
 	return 0;
 }
 
@@ -73,14 +51,41 @@ void showPrompt()
 	printf("%s>", str3);
 }
 
-/*
-void getUserInput()
+void print(tokenlist *tokens)
 {
-	char userInput[30];
-
-	fgets(userInput, sizeof(userInput), stdin);
-
-	printf("You typed %s", userInput);
+	printf("Tokenlist...\n");
+	for (int i=0; i<tokens->size; i++)
+	{
+		printf("%p",&tokens->items[i]);
+		printf(" has token ");
+		printf("%s\n",tokens->items[i]);
+	}
 }
-*/
+
+char* replace_environment_variable(char* token)
+{
+	char str[strlen(token)-1];
+	for (int i=0; i<strlen(token); i++) 
+	{
+		str[i] = token[i+1];
+	}
+	char *b = (char*)malloc(strlen(getenv(str))+1);
+	strcpy(b, getenv(str));
+	free(token);
+	return b;
+}
+
+char* replace_tilda(char* token)
+{
+	char str[strlen(token)-1];
+	for (int i=0; i<strlen(token); i++) 
+	{
+		str[i] = token[i+1];
+	}
+	char *b = (char*)malloc(strlen(getenv("HOME"))+strlen(token));
+	strcpy(b,getenv("HOME"));
+	strcat(b,str);
+	free(token);
+	return b;
+}
 
