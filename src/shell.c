@@ -8,50 +8,88 @@ void showPrompt();
 void print(tokenlist *tokens);
 char* replace_environment_variable(char *token);
 char* replace_tilda(char *token);
+char* get_path_to_command(char* command);
 
 int main()
 {
+	int commandIndex = 0;	// Keeps track of which token indexes hold commands like "ls" "echo" "cd" etc.
+	char *path = NULL;	// When a command token is located like "ls" this will hold its path like "/bin/ls"
+	char *argList[10];	// Holds array of c-string arguments that get passed into execv() function. Will look something like {"/bin/ls","-ls",NULL}
+	int argCount = 0;	// Increments whenever an argument is found. Resets to 0 when a pipe is encountered.
+	bool addArg = false;	// Turns true when an item needs to be added to the argument list.
+	char *input = NULL;	// Holds user input typed into shell.
+	tokenlist *tokens;	// User input is broken into tokens.
+
+	// START
 	showPrompt();
-	char *input = get_input();
-	tokenlist *tokens = get_tokens(input);
+	input = get_input(); 
+	tokens = get_tokens(input);
 	print(tokens);
 
 	// Loop thru tokens...
 	for (int i=0; i<tokens->size; i++)
 	{
-		// Get first character of token.
+		// If token is a command like "ls" "echo" etc.
+		if (commandIndex == i)
+		{
+			// Do path search to locate it on the OS.
+			path = get_path_to_command(tokens->items[i]);
+			// This variable will now hold the path (if it was found)
+			// or it will hold NULL if no path was found.
+
+			// The OS path to the command needs to be first argument in argument list.
+			// So we add that now.
+			argList[0] = path; argCount++;
+		}
+
+		// Get first character of token...
 		switch (tokens->items[i][0])
 		{
 			case '$' :
 				// Replace environment variable.
 				tokens->items[i] = replace_environment_variable(tokens->items[i]);
+				addArg = true;
 				break;
 			case '~' :
 				// Replace tilda with home folder.
 				tokens->items[i] = replace_tilda(tokens->items[i]);
+				addArg = true;
+				break;
+			case '-' :
+				addArg = true;
+				break;
+			case '/' :
+				addArg = true;
+				break;
+			case '|' :
+				// If we reach a "pipe" then the next token should be a command token.
+				// So, we grab that token index here.
+				commandIndex = i+1;
 				break;
 		}
-
+		// Add token to argument list.
+		if (addArg) {argList[argCount] = tokens->items[i]; argCount++;}
+		addArg = false;
 	}
+	print(tokens);
+
+	// Print details before executing command.
+	printf("%s","Executing command...");
+	printf("%s\n",path);
+	printf("%s\n","Using arguments... ");
+	for (int i=0; i<argCount; i++) {printf("%s\n",argList[i]);}
+	printf("%s\n","Here is the output from executing...");
+
+	// Execute command.
+	execv(path,argList);
 
 	print(tokens);
 	free(input);
 	free_tokens(tokens);
 
-	//loop thru delimited $PATH
-	char * delimitedPATH = strtok(getenv("PATH"),":");
-	while (delimitedPATH != NULL)
-	{
-		/* code */
-		printf("%s\n",delimitedPATH);
-		delimitedPATH = strtok(NULL, ":");
-	}
-	
-	
-
 	return 0;
 }
-
+//////////////////////////////////////// FUNCTIONS //////////////////////////////////////
 void showPrompt()
 {
 	char *str1 = getenv("USER");
@@ -101,3 +139,34 @@ char* replace_tilda(char* token)
 	return b;
 }
 
+// First we get the paths from $PATH environment variable, tokenize this
+// path list and append the command name to end of each path string. Then we 
+// test each path with the access() function to see if that path is accessible.
+// If so, this function will return the full path to where the command is located.
+// If no path found, function returns NULL.
+char* get_path_to_command(char* command)
+{	
+	char *b;
+	char *paths;
+	paths = (char*)malloc(strlen(getenv("PATH")+1));
+	strcpy(paths,getenv("PATH"));
+	char *delimitedPATH = strtok(paths,":");
+	while (delimitedPATH != NULL)
+	{	
+		b = (char*)malloc(100);
+
+		// Append the command we are searching for to end of path.
+		strcpy(b,delimitedPATH);
+		strcat(b,"/");
+		strcat(b,command);
+
+		// If path is accessible, return it.
+		if (access(b, F_OK) == 0) {return b;}
+
+		// Otherwise, move to next path.
+		delimitedPATH = strtok(NULL,":");
+		b = NULL;
+	}
+	// If we've gotten here, command was not found at any path. Return NULL.
+	return b;
+}
