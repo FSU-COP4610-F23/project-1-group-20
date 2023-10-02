@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/wait.h>
 #include "lexer.c"
 
 void showPrompt();
@@ -20,6 +21,8 @@ int main()
 	char *input = NULL;	// Holds user input typed into shell.
 	tokenlist *tokens;	// User input is broken into tokens.
 
+while (true)
+{
 	// START
 	showPrompt();
 	input = get_input(); 
@@ -36,6 +39,12 @@ int main()
 			path = get_path_to_command(tokens->items[i]);
 			// This variable will now hold the path (if it was found)
 			// or it will hold NULL if no path was found.
+
+			if(path==NULL)
+			{
+				printf("command not found.\n");
+				exit(0);
+			}
 
 			// The OS path to the command needs to be first argument in argument list.
 			// So we add that now.
@@ -77,16 +86,36 @@ int main()
 	printf("%s","Executing command...");
 	printf("%s\n",path);
 	printf("%s\n","Using arguments... ");
-	for (int i=0; i<argCount; i++) {printf("%s\n",argList[i]);}
+	//for (int i=0; i<argCount; i++) {printf("%s\n",argList[i]);}
 	printf("%s\n","Here is the output from executing...");
 
 	// Execute command.
-	execv(path,argList);
+
+	__pid_t pid = fork();
+	int status; 
+	if (pid == 0) 
+	{
+		execv(path, tokens->items);  //argList OR tokens->items
+	}
+	else if(pid < 0)
+	{
+		fprintf(stderr,"Fork failed");
+		return 1; 
+	}
+	else
+	{
+			//commandFOUND = 1; 
+			waitpid(pid, &status, 0);
+			printf("Child Complete\n");
+			//exit(0); 
+	}
+
+	//execv(path,argList);
 
 	print(tokens);
 	free(input);
 	free_tokens(tokens);
-
+}
 	return 0;
 }
 //////////////////////////////////////// FUNCTIONS //////////////////////////////////////
