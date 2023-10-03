@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifndef LEXER_H
+#define LEXER_H
 
 char *get_input(void) {
 	char *buffer = NULL;
@@ -66,3 +68,5 @@ void free_tokens(tokenlist *tokens) {
 	free(tokens->items);
 	free(tokens);
 }
+
+#endif // LEXER_H

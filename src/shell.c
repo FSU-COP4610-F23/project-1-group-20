@@ -3,7 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
-#include "lexer.c"
+#include "lexer.h"
 
 void showPrompt();
 void print(tokenlist *tokens);
@@ -20,6 +20,7 @@ int main()
 	bool addArg = false;	// Turns true when an item needs to be added to the argument list.
 	char *input = NULL;	// Holds user input typed into shell.
 	tokenlist *tokens;	// User input is broken into tokens.
+	//tokenlist *argListofTokens;
 
 while (true)
 {
@@ -27,6 +28,7 @@ while (true)
 	showPrompt();
 	input = get_input(); 
 	tokens = get_tokens(input);
+	//argListofTokens = get_tokens(input); 
 	print(tokens);
 
 	// Loop thru tokens...
@@ -75,10 +77,18 @@ while (true)
 				// So, we grab that token index here.
 				commandIndex = i+1;
 				break;
+			case '>' :
+				//input redirection
+				addArg = true;
+				break;
+			case '<' :
+				//output redirection
+				addArg = true;
+				break;
 		}
 		// Add token to argument list.
-		if (addArg) {argList[argCount] = tokens->items[i]; argCount++;}
-		addArg = false;
+		//if (addArg) {argList[argCount] = tokens->items[i]; argCount++;}
+		//addArg = false;
 	}
 	print(tokens);
 
@@ -95,6 +105,8 @@ while (true)
 	int status; 
 	if (pid == 0) 
 	{
+		//fflush(stdout);
+		//printf("TESTING CHILD PROCESS");
 		execv(path, tokens->items);  //argList OR tokens->items
 	}
 	else if(pid < 0)
@@ -104,7 +116,6 @@ while (true)
 	}
 	else
 	{
-			//commandFOUND = 1; 
 			waitpid(pid, &status, 0);
 			printf("Child Complete\n");
 			//exit(0); 
