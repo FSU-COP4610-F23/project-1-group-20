@@ -1,7 +1,0 @@
-
-ile.txt
-shell
-5.cs.fsu.edu:/home/class/lindner/project-1-group-20/bin>Tokenlist...
-exit
-Tokenlist...
-exit
