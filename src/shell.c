@@ -13,6 +13,7 @@ void print(tokenlist *tokens);
 char* replace_environment_variable(char *token);
 char* replace_tilda(char *token);
 char* get_path_to_command(char* command);
+tokenlist* convert_tokens(tokenlist* tokens);
 void inputRedirection(tokenlist* tokens, int fileIndex);
 void outputRedirection(tokenlist* tokens, int fileIndex);
 
@@ -20,11 +21,11 @@ struct commandTable
 {
 	tokenlist* items[10];
 	int size;
-}; 
+};
 
+//////////////////////////////// MAIN //////////////////////////////
 int main()
 {
-	int commandIndex = 0;	// Keeps track of which token indexes hold commands like "ls" "echo" "cd" etc.
 	int fileIndex = 0; 	//Keeps track of index of file
 	char *input = "start";	// Holds user input typed into shell.
 	tokenlist *tokens;	// User input is broken into tokens.
@@ -33,10 +34,8 @@ int main()
 	int infd;
 	int inputRedirect = 0; // check if we use input redirction < 
 	int outputRedirect = 0; // check if we use output redirection >
-
 	int processCounter = 0; 
 	int counter = 0; 
-
 	struct commandTable ct; ct.size=0; 
 
 	// START
@@ -46,7 +45,7 @@ int main()
 		input = get_input(); 
 		tokens = get_tokens(input);
 		print(tokens);
-
+		tokens = convert_tokens(tokens);
 
 		//trying to use the ct to tokenize items before goes into the for loop below
 		/*for (int i=0; i<tokens->size; i++) 
@@ -79,38 +78,11 @@ int main()
 		// Loop thru tokens...
 		for (int i=0; i<tokens->size; i++)
 		{
-			// If token is a command like "ls" "echo" etc.
-			if (commandIndex == i)
-			{
-				// Do path search to locate it on the OS.
-				tokens->items[0] = get_path_to_command(tokens->items[i]);
-
-				if(tokens->items[0]==NULL)
-				{
-					printf("command not found.\n");
-					exit(0);
-				}
-			}
-
 			// Get first character of token...
 			switch (tokens->items[i][0])
 			{
-				case '$' :
-					// Replace environment variable.
-					tokens->items[i] = replace_environment_variable(tokens->items[i]);
-					break;
-				case '~' :
-					// Replace tilda with home folder.
-					tokens->items[i] = replace_tilda(tokens->items[i]);
-					break;
-				case '-' :
-					break;
-				case '/' :
-					break;
 				case '|' :
 					// If we reach a "pipe" then the next token should be a command token.
-					// So, we grab that token index here.
-					commandIndex = i+1;
 					processCounter++;
 					break;
 				case '>' :
@@ -132,7 +104,7 @@ int main()
 		print(ct.items[0]); 
 
 
-		// Execute command.
+		// Make Child.
 		__pid_t pid = fork();
 		int status; 
 		if (pid == 0) 
@@ -156,7 +128,8 @@ int main()
 				outputRedirection(tokens,fileIndex);
 			}
 
-			execv(tokens->items[0], tokens->items);  //argList OR tokens->items
+			// Execute command.
+			execv(tokens->items[0], tokens->items);
 		}
 		else if(pid < 0)
 		{
@@ -172,7 +145,6 @@ int main()
 		}
 
 
-	//	print(tokens);
 		free(input);
 		free_tokens(tokens);
 	}
@@ -184,7 +156,6 @@ void showPrompt()
 	char *str1 = getenv("USER");
 	char *str2 = getenv("MACHINE");
 	char *str3 = getenv("PWD");
-
 	printf("%s@", str1);
 	printf("%s:", str2);
 	printf("%s>", str3);
@@ -253,6 +224,49 @@ char* get_path_to_command(char* command)
 	}
 	// If we've gotten here, command was not found at any path. Return NULL.
 	return b;
+}
+
+
+// Performs initial token conversions.
+// Expands ~
+// Converts $USER, $MACHINE, $PATH etc.
+// Converts command names. For example, "ls" becomes "/bin/ls"
+tokenlist* convert_tokens(tokenlist* tokens)
+{
+	// Loop thru tokens...
+	for (int i=0; i<tokens->size; i++)
+	{
+		// First token should be a command like "ls" "echo" etc.
+		if (i == 0)
+		{
+			// Do path search to locate it on the OS.
+			tokens->items[0] = get_path_to_command(tokens->items[i]);
+
+			if(tokens->items[0]==NULL)
+			{
+				printf("command not found.\n");
+				exit(0);
+			}
+		}
+
+		// Get first character of token...
+		switch (tokens->items[i][0])
+		{
+			case '$' :
+				// Replace environment variable.
+				tokens->items[i] = replace_environment_variable(tokens->items[i]);
+				break;
+			case '~' :
+				// Replace tilda with home folder.
+				tokens->items[i] = replace_tilda(tokens->items[i]);
+				break;
+			case '|' :
+				// If we reach a "pipe" then the next token should be a command token.
+				tokens->items[i+1] = get_path_to_command(tokens->items[i+1]);
+				break;
+		}
+	}
+	return tokens;
 }
 
 void inputRedirection(tokenlist* tokens, int fileIndex)
