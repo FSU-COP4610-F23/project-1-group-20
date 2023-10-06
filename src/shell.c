@@ -46,9 +46,50 @@ int main()
 		tokens = get_tokens(input);
 		print(tokens);
 		tokens = convert_tokens(tokens);
+		//build_command_table(tokens);
 
+		int i=0;
+		bool done=false;
+		tokenlist *processTokens = new_tokenlist();
+		while (!done)
+		{
+			if (i == tokens->size) {break;}
+			switch (tokens->items[i][0])
+			{
+				case '|' :
+				done=true;
+				break;
+				default :
+				add_token(processTokens, tokens->items[i]);
+			}
+			i++;
+		}
+		ct.items[ct.size] = processTokens;
+		ct.size++;
+
+		done=false;
+		processTokens = new_tokenlist();
+		while (!done)
+		{
+			if (i == tokens->size) {break;}
+			switch (tokens->items[i][0])
+			{
+				case '|' :
+				done=true;
+				break;
+				default :
+				add_token(processTokens, tokens->items[i]);
+			}
+			i++;
+		}
+		ct.items[ct.size] = processTokens;
+		ct.size++;
+
+		for (int i=0; i<ct.size; i++) {print(ct.items[i]);}
+
+/*
 		//trying to use the ct to tokenize items before goes into the for loop below
-		/*for (int i=0; i<tokens->size; i++) 
+		for (int i=0; i<tokens->size; i++)
 		{
 			switch (tokens->items[i][0])
 			{
@@ -69,10 +110,6 @@ int main()
 			}
 		}
 
-		if (processCounter > 1)
-		{
-			//
-		}*/
 
 
 		// Loop thru tokens...
@@ -99,9 +136,6 @@ int main()
 					break;
 			}
 		}
-		printf("%s\n", "Printing ct.items[0]");
-		ct.items[0] = tokens;
-		print(ct.items[0]); 
 
 
 		// Make Child.
@@ -113,7 +147,7 @@ int main()
 			{
 				tokens->items[0] = multipleProcesses(); 
 			}*/
-
+/*
 			if(inputRedirect ==1)
 			{
 				inputRedirect = 0 ;
@@ -144,7 +178,7 @@ int main()
 				//exit(0); 
 		}
 
-
+*/
 		free(input);
 		free_tokens(tokens);
 	}
