@@ -137,29 +137,51 @@ int main()
 		{
 			// PIPE.
 			// Loop thru command table.
-			for (int i=0; i<ct.size; i++)
+			for (int i = 0; i < ct.size; i++)
 			{
 				pid = fork();
-
-				if (pid == 0) 
+				
+				if (pid == 0)
 				{
-					dup2(fd[1], STDOUT_FILENO);
-					close(fd[0]);
-					close(fd[1]);
-					execv(ct.items[i]->items[0], ct.items[i]->items);
+					//child process
+					if (i != 0)
+					{
+						dup2(fd[0], STDIN_FILENO);
+						close(fd[0]);
+						close(fd[1]);
+					}
+
+					if (i != ct.size - 1)
+					{
+						dup2(fd[1], STDOUT_FILENO);
+						close(fd[0]);
+						close(fd[1]);
+					}
+
+				execv(ct.items[i]->items[0], ct.items[i]->items);
+				//child process exits
 				}
 				else
 				{
+					//parent process
+					if (i != 0)
+					{
+						//close read
+						close(fd[0]);
+					}
+
+					if (i != ct.size - 1)
+					{
+						//close write
+						close(fd[1]);
+					}
+
+					//waiting for child process
 					waitpid(pid, &status, 0);
-					dup2(fd[0], STDIN_FILENO);
-					close(fd[0]);
-					close(fd[1]);
-					execv(ct.items[i+1]->items[0], ct.items[i+1]->items);
 				}
 			}
 		}
-
-	}
+}
 
 	// Reset and get next user input.
 	free(input);
