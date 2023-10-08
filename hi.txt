@@ -1,0 +1,14 @@
+total 48
+drwx------  8 lindner CS-Class 4096 Oct  8 15:24 .
+drwx------ 10 lindner CS-Class 4096 Oct  8 15:23 ..
+-rw-------  1 lindner CS-Class   10 Oct  7 17:48 alpha.txt
+drwx------  2 lindner CS-Class 4096 Oct  8 15:24 bin
+drwx------  8 lindner CS-Class 4096 Oct  8 14:04 .git
+-rw-------  1 lindner CS-Class    0 Oct  8 15:24 hi.txt
+drwx------  2 lindner CS-Class 4096 Sep 18 12:49 include
+-rw-------  1 lindner CS-Class  497 Sep 18 12:49 Makefile
+-rw-------  1 lindner CS-Class   65 Oct  8 14:08 myFile.txt
+drwx------  2 lindner CS-Class 4096 Oct  8 15:24 obj
+-rw-------  1 lindner CS-Class  202 Sep 18 12:49 README.md
+drwx------  2 lindner CS-Class 4096 Oct  8 15:23 src
+drwx------  2 lindner CS-Class 4096 Sep 24 13:00 test

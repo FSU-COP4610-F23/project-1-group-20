@@ -44,8 +44,33 @@ int main()
 		internalCommand = false;
 		showPrompt();
 		input = get_input(); 
+
+		// User typed exit?
+		if (strcmp(input, "exit") == 0)
+		{
+			// Print valid commands.
+			exit(0);
+		}
+
+		// Tokensize and convert/expand.
 		tokens = get_tokens(input);
 		tokens = convert_tokens(tokens);
+
+		// User typed cd?
+		if (strcmp(tokens->items[0], "/bin/cd") == 0)
+		{
+			if (tokens->size == 1) {chdir(getenv("HOME"));}
+			else {chdir(tokens->items[1]);}
+			getcwd(cwd,200);
+			setenv("PWD",cwd,1);
+			internalCommand = true;
+		}
+		// User typed jobs?
+		else if (strcmp(tokens->items[0], "/bin/jobs") == 0)
+		{
+			printf("%s\n","You typed JOBS!");
+			internalCommand = true;
+		}
 
 		// Build command table.
 		int i = 0;
@@ -67,20 +92,6 @@ int main()
 			// Add process tokens to next item in the command table.
 			ct.items[ct.size] = processTokens;
 			ct.size++;
-		}
-		printf("%s\n","Command table...");
-		for (int i=0; i<ct.size; i++) {print(ct.items[i]);}
-		printf("%s","Size = ");
-		printf("%d\n",ct.size);
-
-		// User typed cd?
-		if (strcmp(tokens->items[0], "/bin/cd") == 0)
-		{
-			printf("%s\n","You typed CD!");
-			chdir(tokens->items[1]);
-			getcwd(cwd,200);
-			setenv("PWD",cwd,1);
-			internalCommand = true;
 		}
 
 	if (!internalCommand)

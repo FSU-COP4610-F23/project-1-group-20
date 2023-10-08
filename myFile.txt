@@ -1,0 +1,9 @@
+alpha.txt
+bin
+include
+Makefile
+myFile.txt
+obj
+README.md
+src
+test
