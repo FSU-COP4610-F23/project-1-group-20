@@ -16,6 +16,7 @@ char* get_path_to_command(char* command);
 tokenlist* convert_tokens(tokenlist* tokens);
 void inputRedirection(tokenlist* tokens, int fileIndex);
 void outputRedirection(tokenlist* tokens, int fileIndex);
+int setenv(const char *name, const char *value, int overwrite);
 
 struct commandTable
 {
@@ -26,164 +27,150 @@ struct commandTable
 //////////////////////////////// MAIN //////////////////////////////
 int main()
 {
-	int fileIndex = 0; 	//Keeps track of index of file
-	char *input = "start";	// Holds user input typed into shell.
-	tokenlist *tokens;	// User input is broken into tokens.
-	int outfd;
-	int fd;
-	int infd;
-	int inputRedirect = 0; // check if we use input redirction < 
-	int outputRedirect = 0; // check if we use output redirection >
-	int processCounter = 0; 
-	int counter = 0; 
-	struct commandTable ct; ct.size=0; 
+	int fileIndex = 0; 			// Keeps track of index of file
+	char *input = "start";			// Holds user input typed into shell.
+	tokenlist *tokens;			// User input is broken into tokens.
+	int inputRedirect = 0; 			// Check if we use input redirection < 
+	int outputRedirect = 0; 		// Check if we use output redirection >
+	struct commandTable ct; ct.size=0;	// Command table holds tokens for each process.
+	__pid_t pid;				// Process id.
+	int status;				// Status of process.
+	int fd[2];				// Holds 2 file descriptors for pipe in & pipe out.
+	pipe(fd);				// Make pipe.
+	char cwd[200];				// Current working directory of shell. Updated afer a "cd"
+	bool internalCommand;
 
-	// START
-	while (strcmp(input, "exit")!= 0)
+	// Loop till user types "exit"
+	while (strcmp(input, "exit") != 0)
 	{
+		internalCommand = false;
 		showPrompt();
 		input = get_input(); 
 		tokens = get_tokens(input);
-		print(tokens);
 		tokens = convert_tokens(tokens);
-		//build_command_table(tokens);
 
-		int i=0;
-		bool done=false;
-		tokenlist *processTokens = new_tokenlist();
-		while (!done)
+		// Build command table.
+		int i = 0;
+		while (i<tokens->size)
 		{
-			if (i == tokens->size) {break;}
-			switch (tokens->items[i][0])
+			bool done=false;
+			tokenlist *processTokens = new_tokenlist();
+			while (!done && i<tokens->size)
 			{
-				case '|' :
-				done=true;
-				break;
-				default :
-				add_token(processTokens, tokens->items[i]);
+				switch (tokens->items[i][0])
+				{
+					case '|' :
+						done=true; tokens->items[i] = NULL; break;
+					default :
+						add_token(processTokens, tokens->items[i]);
+				}
+				i++;
 			}
-			i++;
+			// Add process tokens to next item in the command table.
+			ct.items[ct.size] = processTokens;
+			ct.size++;
 		}
-		ct.items[ct.size] = processTokens;
-		ct.size++;
-
-		done=false;
-		processTokens = new_tokenlist();
-		while (!done)
-		{
-			if (i == tokens->size) {break;}
-			switch (tokens->items[i][0])
-			{
-				case '|' :
-				done=true;
-				break;
-				default :
-				add_token(processTokens, tokens->items[i]);
-			}
-			i++;
-		}
-		ct.items[ct.size] = processTokens;
-		ct.size++;
-
+		printf("%s\n","Command table...");
 		for (int i=0; i<ct.size; i++) {print(ct.items[i]);}
+		printf("%s","Size = ");
+		printf("%d\n",ct.size);
 
-/*
-		//trying to use the ct to tokenize items before goes into the for loop below
-		for (int i=0; i<tokens->size; i++)
+		// User typed cd?
+		if (strcmp(tokens->items[0], "/bin/cd") == 0)
 		{
-			switch (tokens->items[i][0])
-			{
-				case '>':
-					processCounter++; 
-					while(tokens->items[counter][0] != '>')
-					{
-						ct.items[0][counter] = get_tokens(tokens->items[counter]);
-						counter++;
-					}
-					break;
-				case '<':
-					processCounter++; 
-					break;
-				case '|':
-					processCounter++; 
-					break;
-			}
+			printf("%s\n","You typed CD!");
+			chdir(tokens->items[1]);
+			getcwd(cwd,200);
+			setenv("PWD",cwd,1);
+			internalCommand = true;
 		}
 
-
-
-		// Loop thru tokens...
-		for (int i=0; i<tokens->size; i++)
+	if (!internalCommand)
+	{	
+		if (ct.size == 1)
 		{
-			// Get first character of token...
-			switch (tokens->items[i][0])
+			tokens = ct.items[0];
+			inputRedirect = outputRedirect = 0;
+			// Find out if input or output redirection is needed.
+			for (int i=0; i<tokens->size; i++)
 			{
-				case '|' :
-					// If we reach a "pipe" then the next token should be a command token.
-					processCounter++;
-					break;
-				case '>' :
-					//output redirection
-					fileIndex = i +1;
-					outputRedirect = 1 ; //used in child process to run output redirection 
-					processCounter++;
-					break;
-				case '<' :
-					//input redirection
-					fileIndex = i + 1; 
-					inputRedirect = 1; 
-					processCounter++; 
-					break;
+				// Get first character of token...
+				switch (tokens->items[i][0])
+				{
+					case '>' :
+						//output redirection
+						fileIndex = i + 1;
+						outputRedirect = 1 ;
+						break;
+					case '<' :
+						//input redirection
+						fileIndex = i + 1; 
+						inputRedirect = 1; 
+						break;
+				}
 			}
-		}
-
-
-		// Make Child.
-		__pid_t pid = fork();
-		int status; 
-		if (pid == 0) 
-		{
-			/*if(processCounter > 1)
+			// REDIRECTION.
+			pid = fork();
+ 
+			if (pid == 0) 
 			{
-				tokens->items[0] = multipleProcesses(); 
-			}*/
-/*
-			if(inputRedirect ==1)
-			{
-				inputRedirect = 0 ;
-				tokens->items[fileIndex-1] = NULL;
-				inputRedirection(tokens, fileIndex);
+				if (inputRedirect == 1)
+				{
+					tokens->items[fileIndex-1] = NULL;
+					dup(STDIN_FILENO);
+					close(STDIN_FILENO);
+					fd[1] = open(tokens->items[fileIndex], O_RDONLY);
+				}
+				if (outputRedirect == 1)
+				{
+					tokens->items[fileIndex-1] = NULL;
+					dup(STDOUT_FILENO);
+					close(STDOUT_FILENO);
+					fd[0] = open(tokens->items[fileIndex], O_RDWR | O_CREAT, 0600);
+				}
+				// Execute command.
+				execv(tokens->items[0], tokens->items);
 			}
-
-			if (outputRedirect==1)
-			{
-				outputRedirect = 0;
-				tokens->items[fileIndex-1] = NULL;
-				outputRedirection(tokens,fileIndex);
-			}
-
-			// Execute command.
-			execv(tokens->items[0], tokens->items);
-		}
-		else if(pid < 0)
-		{
-			fprintf(stderr,"Fork failed");
-			return 1; 
+			else {waitpid(pid, &status, 0);}
 		}
 		else
 		{
-			waitpid(pid, &status, 0);
-			
-			printf("Child Complete\n");
-				//exit(0); 
+			// PIPE.
+			// Loop thru command table.
+			for (int i=0; i<ct.size; i++)
+			{
+				pid = fork();
+
+				if (pid == 0) 
+				{
+					dup2(fd[1], STDOUT_FILENO);
+					close(fd[0]);
+					close(fd[1]);
+					execv(ct.items[i]->items[0], ct.items[i]->items);
+				}
+				else
+				{
+					waitpid(pid, &status, 0);
+					dup2(fd[0], STDIN_FILENO);
+					close(fd[0]);
+					close(fd[1]);
+					execv(ct.items[i+1]->items[0], ct.items[i+1]->items);
+				}
+			}
 		}
 
-*/
-		free(input);
-		free_tokens(tokens);
 	}
-	return 0;
+
+	// Reset and get next user input.
+	free(input);
+	free_tokens(tokens);
+	ct.items[0] = NULL;
+	ct.size = 0;
+	}
+// exit.
+return 0;
 }
+
 //////////////////////////////////////// FUNCTIONS //////////////////////////////////////
 void showPrompt()
 {
@@ -235,31 +222,30 @@ char* replace_tilda(char* token)
 // If no path found, function returns NULL.
 char* get_path_to_command(char* command)
 {	
-	char *b;
+	char *p;
 	char *paths;
 	paths = (char*)malloc(strlen(getenv("PATH")+1));
 	strcpy(paths,getenv("PATH"));
 	char *delimitedPATH = strtok(paths,":");
 	while (delimitedPATH != NULL)
 	{	
-		b = (char*)malloc(100);
+		p = (char*)malloc(100);
 
 		// Append the command we are searching for to end of path.
-		strcpy(b,delimitedPATH);
-		strcat(b,"/");
-		strcat(b,command);
+		strcpy(p,delimitedPATH);
+		strcat(p,"/");
+		strcat(p,command);
 
 		// If path is accessible, return it.
-		if (access(b, F_OK) == 0) {return b;}
+		if (access(p, F_OK) == 0) {return p;}
 
 		// Otherwise, move to next path.
 		delimitedPATH = strtok(NULL,":");
-		b = NULL;
+		p = NULL;
 	}
 	// If we've gotten here, command was not found at any path. Return NULL.
-	return b;
+	return p;
 }
-
 
 // Performs initial token conversions.
 // Expands ~
@@ -282,7 +268,6 @@ tokenlist* convert_tokens(tokenlist* tokens)
 				exit(0);
 			}
 		}
-
 		// Get first character of token...
 		switch (tokens->items[i][0])
 		{
@@ -303,6 +288,7 @@ tokenlist* convert_tokens(tokenlist* tokens)
 	return tokens;
 }
 
+/*
 void inputRedirection(tokenlist* tokens, int fileIndex)
 {
 	int fd = open(tokens->items[fileIndex], O_RDONLY);
@@ -310,9 +296,9 @@ void inputRedirection(tokenlist* tokens, int fileIndex)
 	close(STDIN_FILENO);
 	dup2(fd, STDIN_FILENO);
 
-	/*close(fd);
-	dup2(infd,STDIN_FILENO);
-	close(infd);*/
+	//close(fd);
+	//dup2(infd,STDIN_FILENO);
+	//close(infd);
 }
 
 void outputRedirection(tokenlist* tokens, int fileIndex)
@@ -327,7 +313,7 @@ void outputRedirection(tokenlist* tokens, int fileIndex)
 	close(outfd);
 }
 
-/*int multipleProcesses(char* token1, char* token2, char* token3)
+int multipleProcesses(char* token1, char* token2, char* token3)
 {
 	__pid_t pid = fork();
 		int status; 
