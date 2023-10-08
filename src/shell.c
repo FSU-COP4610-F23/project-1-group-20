@@ -14,8 +14,6 @@ char* replace_environment_variable(char *token);
 char* replace_tilda(char *token);
 char* get_path_to_command(char* command);
 tokenlist* convert_tokens(tokenlist* tokens);
-void inputRedirection(tokenlist* tokens, int fileIndex);
-void outputRedirection(tokenlist* tokens, int fileIndex);
 int setenv(const char *name, const char *value, int overwrite);
 
 struct commandTable
@@ -310,49 +308,3 @@ tokenlist* convert_tokens(tokenlist* tokens)
 	return tokens;
 }
 
-/*
-void inputRedirection(tokenlist* tokens, int fileIndex)
-{
-	int fd = open(tokens->items[fileIndex], O_RDONLY);
-	int infd = dup(STDIN_FILENO);
-	close(STDIN_FILENO);
-	dup2(fd, STDIN_FILENO);
-
-	//close(fd);
-	//dup2(infd,STDIN_FILENO);
-	//close(infd);
-}
-
-void outputRedirection(tokenlist* tokens, int fileIndex)
-{
-	int outfd = dup(STDOUT_FILENO); //Duplication STDOUT
-	printf("fileindex var: %d\n", fileIndex);
-	close(STDOUT_FILENO);
-	int fd = open(tokens->items[fileIndex], O_RDWR | O_CREAT, 0600);
-	fileIndex = 0;
-	dup(outfd);
-				// we can close extra reference to stdout
-	close(outfd);
-}
-
-int multipleProcesses(char* token1, char* token2, char* token3)
-{
-	__pid_t pid = fork();
-		int status; 
-		if (pid == 0) 
-		{
-			return execv(token1, [token1, token2, token3]);  //argList OR tokens->items
-		}
-		else if(pid < 0)
-		{
-			fprintf(stderr,"Fork failed");
-			return 1; 
-		}
-		else
-		{
-			waitpid(pid, &status, 0);
-			
-			printf("INSIDE FUNCTION Child Complete\n");
-				//exit(0); 
-		}
-}*/
