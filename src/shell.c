@@ -90,9 +90,6 @@ int main()
 		// User typed jobs?
 		else if (strcmp(tokens->items[0], "/bin/jobs") == 0)
 		{
-			printf("%s\n","You typed JOBS!");
-			printf("jobs: \n");
-			//printf("%s\n","Command table...");
 			for (int i=0; i<jobs.size; i++) {printJobs(jobs.items[i], i+1,BackgroundProcesses, runningOrDone);}
 			internalCommand = true;
 		}
@@ -182,9 +179,7 @@ int main()
 				if (checkBackgroundProcess > 0)
 				{
 					//tokens->items[ampersandIndex] = NULL;
-					printf("Parent process: PID = %d, Child PID = %d\n", getpid(), pid);
 					BackgroundProcesses[numBackgroundProcesses-1] = pid;
-					//printf("[%d] %d \n",numBackgroundProcesses, BackgroundProcesses[numBackgroundProcesses-1]);
 
 					for (int i = 0; i < numBackgroundProcesses; i++)
 					{
@@ -215,7 +210,6 @@ int main()
 									}
 								} 
 		//						runningOrDone[i] = 1;		//INDEX IS NOT i NEEDS TO BE OLD ONE
-								//print(tokens);
 							} 
 						} 
 					}
