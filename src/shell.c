@@ -11,6 +11,7 @@
 void showPrompt();
 void print(tokenlist *tokens);
 char* replace_environment_variable(char *token);
+void printJobs(tokenlist *tokens, int num, __pid_t BackgroundProcesses[10], int runningOrDone[10]);
 char* replace_tilda(char *token);
 char* get_path_to_command(char* command);
 tokenlist* convert_tokens(tokenlist* tokens);
@@ -38,6 +39,15 @@ int main()
 	char cwd[200];				// Current working directory of shell. Updated afer a "cd"
 	bool internalCommand;
 
+
+	__pid_t BackgroundProcesses[10];
+	int numBackgroundProcesses = 0;
+	int ampersandIndex = 0; 
+	struct commandTable jobs; jobs.size=0; 
+	int checkBackgroundProcess = 0;
+	int counter = 1; 
+	int runningOrDone[10] = {0,0,0,0,0,0,0,0,0,0}; //checks if background process still running or done
+
 	// Loop till user types "exit"
 	while (strcmp(input, "exit") != 0)
 	{
@@ -54,6 +64,19 @@ int main()
 
 		// Tokensize and convert/expand.
 		tokens = get_tokens(input);
+
+		//THIS IS NEW
+		for (int i=0; i<tokens->size; i++)
+		{
+			switch (tokens->items[i][0])
+			{
+				case '&' :
+				jobs.items[jobs.size] = tokens;
+				jobs.size++;
+				break;
+			}
+		}
+
 		tokens = convert_tokens(tokens);
 
 		// User typed cd?
@@ -69,6 +92,9 @@ int main()
 		else if (strcmp(tokens->items[0], "/bin/jobs") == 0)
 		{
 			printf("%s\n","You typed JOBS!");
+			printf("jobs: \n");
+			//printf("%s\n","Command table...");
+			for (int i=0; i<jobs.size; i++) {printJobs(jobs.items[i], i+1,BackgroundProcesses, runningOrDone);}
 			internalCommand = true;
 		}
 
@@ -116,6 +142,13 @@ int main()
 						fileIndex = i + 1; 
 						inputRedirect = 1; 
 						break;
+
+					case '&' :
+						ampersandIndex = i; 
+						numBackgroundProcesses++;
+						tokens->items[ampersandIndex] = NULL;
+						checkBackgroundProcess = 1; 
+						break; 
 				}
 			}
 			// REDIRECTION.
@@ -140,7 +173,59 @@ int main()
 				// Execute command.
 				execv(tokens->items[0], tokens->items);
 			}
-			else {waitpid(pid, &status, 0);}
+			else
+			{
+				if (checkBackgroundProcess > 0)
+				{
+					//tokens->items[ampersandIndex] = NULL;
+					printf("Parent process: PID = %d, Child PID = %d\n", getpid(), pid);
+					BackgroundProcesses[numBackgroundProcesses-1] = pid;
+					//printf("[%d] %d \n",numBackgroundProcesses, BackgroundProcesses[numBackgroundProcesses-1]);
+
+					for (int i = 0; i < numBackgroundProcesses; i++)
+					{
+						/* code */
+						pid_t result = waitpid(BackgroundProcesses[i], &status, WNOHANG);
+						if (result == 0) {
+							// Child process is still running
+							//printf("%d Background process is still running.\n", pid);
+							//printf("%d \n", pid);
+						} else if (result > 0) {
+						// Child process has terminated
+							if (WIFEXITED(status)) {
+								// Child terminated normally
+								if (i==0) 
+								{
+									//printf("Background process exited with status: %d\n", BackgroundProcesses[i]);
+								} else
+								{
+									//printf("Background process exited with status: %d\n", BackgroundProcesses[i-1]);
+								}
+								printf("[%d]  + %d done \n",counter++, result);
+								//loop thru pids to check which is result, if 
+								for (int j = 0; j<numBackgroundProcesses;j++)
+								{
+									if(BackgroundProcesses[j] == result)
+									{
+										runningOrDone[j] = 1;
+									}
+								} 
+		//						runningOrDone[i] = 1;		//INDEX IS NOT i NEEDS TO BE OLD ONE
+								//print(tokens);
+							} 
+						} 
+					}
+
+					printf("[%d] %d \n",numBackgroundProcesses, BackgroundProcesses[numBackgroundProcesses-1]);
+
+
+					checkBackgroundProcess = 0; 
+
+
+				}
+				else{waitpid(pid, &status, 0);} 
+
+			}	
 		}
 		else
 		{
@@ -217,6 +302,22 @@ void print(tokenlist *tokens)
 {
 	printf("Tokenlist...\n");
 	for (int i=0; i<tokens->size; i++) {printf("%s\n",tokens->items[i]);}
+}
+
+void printJobs(tokenlist *tokens, int num, __pid_t BackgroundProcesses[10], int runningOrDone[10])
+{	
+	//make sure to delete
+	if (runningOrDone[num-1] == 1)
+	{
+		return; 
+		printf("[%d]   + %d done ",num,BackgroundProcesses[num-1]);
+	} 
+	printf("[%d]   + %d running ",num,BackgroundProcesses[num-1]);
+	for (int i=0; i<tokens->size; i++)
+	{
+		printf("%s ",tokens->items[i]);
+	}
+	printf("\n");
 }
 
 char* replace_environment_variable(char* token)
@@ -318,4 +419,3 @@ tokenlist* convert_tokens(tokenlist* tokens)
 	}
 	return tokens;
 }
-
