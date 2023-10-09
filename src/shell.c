@@ -38,9 +38,7 @@ int main()
 	int fd[2];				// Holds 2 file descriptors for pipe in & pipe out.
 	pipe(fd);				// Make pipe.
 	char cwd[200];				// Current working directory of shell. Updated afer a "cd"
-	bool internalCommand;
-
-
+	bool internalCommand = false;		// To identify internal shell commands vs external commands.
 	__pid_t BackgroundProcesses[10];
 	int numBackgroundProcesses = 0;
 	int ampersandIndex = 0; 
@@ -49,10 +47,9 @@ int main()
 	int counter = 1; 
 	int runningOrDone[10] = {0,0,0,0,0,0,0,0,0,0}; //checks if background process still running or done
 
-	// Loop till user types "exit"
+	// START Loop till user types "exit"
 	while (strcmp(input, "exit") != 0)
 	{
-		internalCommand = false;
 		showPrompt();
 		input = get_input(); 
 
@@ -63,7 +60,7 @@ int main()
 			exit(0);
 		}
 
-		// Tokensize and convert/expand.
+		// Tokenize user input.
 		tokens = get_tokens(input);
 
 		//THIS IS NEW
@@ -78,6 +75,7 @@ int main()
 			}
 		}
 
+		// Convert/Expand tokens like $ or ~ or command path.
 		tokens = convert_tokens(tokens);
 
 		// User typed cd?
@@ -121,6 +119,7 @@ int main()
 			ct.size++;
 		}
 
+	// EXTERNAL command execution.
 	if (!internalCommand)
 	{	
 		if (ct.size == 1)
@@ -281,12 +280,12 @@ int main()
 			}
 		}
 }
-
 	// Reset and get next user input.
 	free(input);
 	free_tokens(tokens);
 	ct.items[0] = NULL;
 	ct.size = 0;
+	internalCommand = false;
 	}
 // exit.
 return 0;
