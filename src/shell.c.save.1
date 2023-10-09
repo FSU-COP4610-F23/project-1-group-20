@@ -8,15 +8,13 @@
 #include <fcntl.h>
 #include "lexer.h"
 
-void showPrompt(); //show user prompt and directory
-void print(tokenlist *tokens); //printing token list
-char* replace_environment_variable(char *token); //replacing env with neccessary environment
-//printing background processes and states
-void printJobs(tokenlist *tokens, int num, __pid_t BackgroundProcesses[10], int runningOrDone[10]); 
-char* replace_tilda(char *token); //Replaces tilde with the path to the path to the  user's home directory. 
-char* get_path_to_command(char* command); //Returns the path to where the specificed command is located.
-tokenlist* convert_tokens(tokenlist* tokens); //Performs initial token conversions.
-int setenv(const char *name, const char *value, int overwrite); //Explicitly set environment. 
+void showPrompt();
+void print(tokenlist *tokens);
+char* replace_environment_variable(char *token);
+char* replace_tilda(char *token);
+char* get_path_to_command(char* command);
+tokenlist* convert_tokens(tokenlist* tokens);
+int setenv(const char *name, const char *value, int overwrite);
 
 struct commandTable
 {
@@ -40,15 +38,6 @@ int main()
 	char cwd[200];				// Current working directory of shell. Updated afer a "cd"
 	bool internalCommand;
 
-
-	__pid_t BackgroundProcesses[10];
-	int numBackgroundProcesses = 0;
-	int ampersandIndex = 0; 
-	struct commandTable jobs; jobs.size=0; 
-	int checkBackgroundProcess = 0; 
-	int counter = 1; 
-	int runningOrDone[10] = {0,0,0,0,0,0,0,0,0,0}; //checks if background process still running or done
-
 	// Loop till user types "exit"
 	while (strcmp(input, "exit") != 0)
 	{
@@ -65,19 +54,6 @@ int main()
 
 		// Tokensize and convert/expand.
 		tokens = get_tokens(input);
-
-		//THIS IS NEW
-		for (int i=0; i<tokens->size; i++)
-		{
-			switch (tokens->items[i][0])
-			{
-				case '&' :
-				jobs.items[jobs.size] = tokens;
-				jobs.size++;
-				break;
-			}
-		}
-
 		tokens = convert_tokens(tokens);
 
 		// User typed cd?
@@ -93,9 +69,6 @@ int main()
 		else if (strcmp(tokens->items[0], "/bin/jobs") == 0)
 		{
 			printf("%s\n","You typed JOBS!");
-			printf("jobs: \n");
-			//printf("%s\n","Command table...");
-			for (int i=0; i<jobs.size; i++) {printJobs(jobs.items[i], i+1,BackgroundProcesses, runningOrDone);}
 			internalCommand = true;
 		}
 
@@ -123,15 +96,15 @@ int main()
 
 	if (!internalCommand)
 	{	
-		if (ct.size == 1)
+		/*if (ct.size >= 1)
 		{
-			tokens = ct.items[0]; //setting tokens to contents of the command table
-			inputRedirect = outputRedirect = 0;
+			tokens = ct.items[0];
+			inputRedirect = outputRedirect = 0;*/
 			// Find out if input or output redirection is needed.
-			for (int i=0; i<tokens->size; i++)
-			{
+			/*for (int i=0; i<tokens->size; i++)
+			{*/
 				// Get first character of token...
-				switch (tokens->items[i][0])
+			/*	switch (tokens->items[i][0])
 				{
 					case '>' :
 						//output redirection
@@ -143,24 +116,15 @@ int main()
 						fileIndex = i + 1; 
 						inputRedirect = 1; 
 						break;
-
-					case '&' :
-						//identified for background processes
-						ampersandIndex = i; 
-						numBackgroundProcesses++;
-						tokens->items[ampersandIndex] = NULL;
-						checkBackgroundProcess = 1; 
-						break; 
 				}
-			}
+			}*/
 			// REDIRECTION.
-			pid = fork();
+			/*pid = fork();
  
 			if (pid == 0) 
 			{
 				if (inputRedirect == 1)
-				{ 
-					//if input token is identified
+				{
 					tokens->items[fileIndex-1] = NULL;
 					dup(STDIN_FILENO);
 					close(STDIN_FILENO);
@@ -168,7 +132,6 @@ int main()
 				}
 				if (outputRedirect == 1)
 				{
-					//if output token is identified
 					tokens->items[fileIndex-1] = NULL;
 					dup(STDOUT_FILENO);
 					close(STDOUT_FILENO);
@@ -177,61 +140,125 @@ int main()
 				// Execute command.
 				execv(tokens->items[0], tokens->items);
 			}
-			else
-			{
-				//if a background process exisits
-				if (checkBackgroundProcess > 0)
-				{
-					//tokens->items[ampersandIndex] = NULL;
-					printf("Parent process: PID = %d, Child PID = %d\n", getpid(), pid);
-					BackgroundProcesses[numBackgroundProcesses-1] = pid;
-					//printf("[%d] %d \n",numBackgroundProcesses, BackgroundProcesses[numBackgroundProcesses-1]);
+			else {waitpid(pid, &status, 0);}*/
 
-					for (int i = 0; i < numBackgroundProcesses; i++)
-					{
-						/* code */
-						pid_t result = waitpid(BackgroundProcesses[i], &status, WNOHANG);
-						if (result == 0) {
-							// Child process is still running
-							//printf("%d Background process is still running.\n", pid);
-							//printf("%d \n", pid);
-						} else if (result > 0) {
-						// Child process has terminated
-							if (WIFEXITED(status)) {
-								// Child terminated normally
-								if (i==0) 
-								{
-									//printf("Background process exited with status: %d\n", BackgroundProcesses[i]);
-								} else
-								{
-									//printf("Background process exited with status: %d\n", BackgroundProcesses[i-1]);
-								}
-								printf("[%d]  + %d done \n",counter++, result);
-								//loop thru pids to check which is result, if 
-								for (int j = 0; j<numBackgroundProcesses;j++)
-								{
-									if(BackgroundProcesses[j] == result)
-									{
-										runningOrDone[j] = 1;
-									}
-								} 
-		//						runningOrDone[i] = 1;		//INDEX IS NOT i NEEDS TO BE OLD ONE
-								//print(tokens);
-							} 
-						} 
-					}
+			////////////////////////////////TESTING/////////////////////////////////
+			if (ct.size >= 1)
+    {
+        tokens = ct.items[0];
+        int numRedirections = 0; // Count of redirection commands
+        int inputRedirectIndices[ct.size]; // Array to store input redirection indices
+        int outputRedirectIndices[ct.size]; // Array to store output redirection indices
 
-					printf("[%d] %d \n",numBackgroundProcesses, BackgroundProcesses[numBackgroundProcesses-1]);
+        // Find out if input or output redirection is needed.
+        for (int i = 0; i < tokens->size; i++)
+        {
+            // Check for input redirection
+            if (tokens->items[i][0] == '<')
+            {
+                inputRedirectIndices[numRedirections] = i;
+                numRedirections++;
+            }
+            // Check for output redirection
+            else if (tokens->items[i][0] == '>')
+            {
+                outputRedirectIndices[numRedirections] = i;
+                numRedirections++;
+            }
+        }
 
+        // If there are redirection commands, process them in sequence
+        if (numRedirections > 0)
+        {
+            for (int r = 0; r < numRedirections; r++)
+            {
+                pid = fork();
 
-					checkBackgroundProcess = 0; 
+                if (pid == 0)
+                {
+                    // Handle input redirection
+                    if (inputRedirectIndices[r] >= 0)
+                    {
+                        int fileIndex = inputRedirectIndices[r] + 1;
+                        if (fileIndex < tokens->size)
+                        {
+                            tokens->items[inputRedirectIndices[r]] = NULL;
+                            int input_fd = open(tokens->items[fileIndex], O_RDONLY);
+                            if (input_fd != -1)
+                            {
+                                dup2(input_fd, STDIN_FILENO);
+                                close(input_fd);
+                            }
+                            else
+                            {
+                                perror("open");
+                                exit(EXIT_FAILURE);
+                            }
+                        }
+                        else
+                        {
+                            fprintf(stderr, "Missing input file after '<'\n");
+                            exit(EXIT_FAILURE);
+                        }
+                    }
 
+                    // Handle output redirection
+                    if (outputRedirectIndices[r] >= 0)
+                    {
+                        int fileIndex = outputRedirectIndices[r] + 1;
+                        if (fileIndex < tokens->size)
+                        {
+                            tokens->items[outputRedirectIndices[r]] = NULL;
+                            int output_fd = open(tokens->items[fileIndex], O_WRONLY | O_CREAT | O_TRUNC, 0666);
+                            if (output_fd != -1)
+                            {
+                                dup2(output_fd, STDOUT_FILENO);
+                                close(output_fd);
+                            }
+                            else
+                            {
+                                perror("open");
+                                exit(EXIT_FAILURE);
+                            }
+                        }
+                        else
+                        {
+                            fprintf(stderr, "Missing output file after '>'\n");
+                            exit(EXIT_FAILURE);
+                        }
+                    }
 
-				}
-				else{waitpid(pid, &status, 0);} 
+                    // Execute the command
+                    execv(tokens->items[0], tokens->items);
+                    perror("execv");
+                    exit(EXIT_FAILURE);
+                }
+                else
+                {
+                    waitpid(pid, &status, 0);
+                }
+            }
+        }
+        else
+        {
+            // No redirection commands found, execute the command directly
+            pid = fork();
 
-			}	
-		}
+            if (pid == 0)
+            {
+                execv(tokens->items[0], tokens->items);
+                perror("execv");
+                exit(EXIT_FAILURE);
+            }
+            else
+            {
+                waitpid(pid, &status, 0);
+            }
+        }
+    }
+///////////////////////////////////EN
+
+		//}
 		else
 		{
 			// PIPE.
@@ -293,10 +320,8 @@ return 0;
 }
 
 //////////////////////////////////////// FUNCTIONS //////////////////////////////////////
-// Function prints a command-line prompt similar to that of a Unix shell.
 void showPrompt()
 {
-	//variables for obtaining user, machine, or pwd
 	char *str1 = getenv("USER");
 	char *str2 = getenv("MACHINE");
 	char *str3 = getenv("PWD");
@@ -305,32 +330,12 @@ void showPrompt()
 	printf("%s>", str3);
 }
 
-// Prints tokens in token list, allowing for debugging.
 void print(tokenlist *tokens)
 {
 	printf("Tokenlist...\n");
 	for (int i=0; i<tokens->size; i++) {printf("%s\n",tokens->items[i]);}
 }
 
-void printJobs(tokenlist *tokens, int num, __pid_t BackgroundProcesses[10], int runningOrDone[10])
-{	
-	//make sure to delete
-	if (runningOrDone[num-1] == 1)
-	{
-		return; 
-		printf("[%d]   + %d done ",num,BackgroundProcesses[num-1]);
-	} 
-	printf("[%d]   + %d running ",num,BackgroundProcesses[num-1]);
-	for (int i=0; i<tokens->size; i++)
-	{
-		printf("%s ",tokens->items[i]);
-	}
-	printf("\n");
-}
-
-// Creating a new char array to remove the leading character, such as the '$'.
-// Dynamically allocated new memory for the new array with a size that can hold the
-// environment variable. Uses 'getenv' to obtain the value of the environment variable.
 char* replace_environment_variable(char* token)
 {
 	char str[strlen(token)-1];
@@ -344,8 +349,6 @@ char* replace_environment_variable(char* token)
 	return b;
 }
 
-// This function takes a token as input and replaces the tilde with the path to the
-// users home directory.
 char* replace_tilda(char* token)
 {
 	char str[strlen(token)-1];
@@ -432,3 +435,4 @@ tokenlist* convert_tokens(tokenlist* tokens)
 	}
 	return tokens;
 }
+

@@ -39,4 +39,5 @@ None.
 ## Possible bugs
 
 When using I/O direction, only one '<' or '>' can be used at a time. When using piping,
-a singular pipe can run successfully, but once ran again it will buffer.
+a singular pipe can run successfully, but once ran again it will buffer. Two pipes causes
+the program to buffer.
