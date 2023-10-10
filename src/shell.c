@@ -178,38 +178,30 @@ int main()
 				//if a background process exisits
 				if (checkBackgroundProcess > 0)
 				{
-					//tokens->items[ampersandIndex] = NULL;
 					BackgroundProcesses[numBackgroundProcesses-1] = pid;
 
 					for (int i = 0; i < numBackgroundProcesses; i++)
 					{
-						/* code */
 						pid_t result = waitpid(BackgroundProcesses[i], &status, WNOHANG);
 						if (result == 0) {
-							// Child process is still running
-							//printf("%d Background process is still running.\n", pid);
-							//printf("%d \n", pid);
+							// checks if background process still running
+							//printf("%d Background process is still running.\n", result);
+							
 						} else if (result > 0) {
-						// Child process has terminated
+						
 							if (WIFEXITED(status)) {
-								// Child terminated normally
-								if (i==0) 
-								{
-									//printf("Background process exited with status: %d\n", BackgroundProcesses[i]);
-								} else
-								{
-									//printf("Background process exited with status: %d\n", BackgroundProcesses[i-1]);
-								}
+							
 								printf("[%d]  + %d done \n",counter++, result);
 								//loop thru pids to check which is result, if 
 								for (int j = 0; j<numBackgroundProcesses;j++)
 								{
 									if(BackgroundProcesses[j] == result)
 									{
+										checkBackgroundProcess--;
 										runningOrDone[j] = 1;
 									}
-								} 
-		//						runningOrDone[i] = 1;		//INDEX IS NOT i NEEDS TO BE OLD ONE
+								}
+								//printf("[%d] %d \n",numBackgroundProcesses, BackgroundProcesses[numBackgroundProcesses-1]);
 							} 
 						} 
 					}
@@ -217,7 +209,7 @@ int main()
 					printf("[%d] %d \n",numBackgroundProcesses, BackgroundProcesses[numBackgroundProcesses-1]);
 
 
-					checkBackgroundProcess = 0; 
+					//checkBackgroundProcess = 0; 
 
 
 				}

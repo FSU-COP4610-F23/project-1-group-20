@@ -42,3 +42,5 @@ When using I/O direction, only one '<' or '>' can be used at a time. When using 
 a singular pipe can run successfully, but once ran again it will buffer. Two pipes causes
 the program to buffer. & works correctly, however, if used with a command, such as ls,
 it will buffer but if you type the program will continue with the command you type in.
+For background processes, only outputs when a process is done if another & is inputted
+and will sometimes not bring up prompt afterwards, but a command can still be inputted.
